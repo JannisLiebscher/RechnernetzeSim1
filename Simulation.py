@@ -54,11 +54,20 @@ class Ev:
 # methods push, pop, and start as described in the problem description
 
 class EvQueue:
-    liste = heapq()
+    q = []
     evCount = 0
     time = 0
-    def push(event):
-        heapq.heappush(liste, event)
+    heapq.heapify(q)
+
+    def start(self):
+        while len(self.q) != 0:
+            self.pop()
+
+    def push(self, event):
+        heapq.heappush(self.q, event)
+
+    def pop(self):
+        event = heapq.heappop(self.q)
 
 
 # class consists of
@@ -68,21 +77,22 @@ class EvQueue:
 # CustomerWaiting, busy: possible states of this station
 class Station():
     delay_per_item = 1
-    stationsname = "default"
+    #stationsname = "default"
     busy = False
     buffer = deque
 
-    def __init__(self,delay_per_item, name):
+    def __init__(self, delay_per_item, name):
         print("2. Initialize the new instance of Point.")
         self.delay_per_Item = delay_per_item
-        self.stationsnamename = name
+        self.stationsname = name
 
     def anstellen(self, customer):
         if (customer.shoppinglist[0][2] <= len(self.buffer)):
             if (len(self.buffer) == 0 and self.busy == False):
                 self.buffer.append(customer)
                 self.busy = True
-                fertig = Ev(EvQueue.time + (self.delay_per_Item * customer.shoppinglist[0][3]), self.stationsname, (customer, "Fertig"), 1) # 1 eventuell weg
+                fertig = Ev(EvQueue.time + (self.delay_per_Item * customer.shoppinglist[0][3]), self.stationsname,
+                            (customer, "Fertig"), 1)  # 1 eventuell weg
                 EvQueue.push(fertig)
             else:
                 self.buffer.append(customer)
@@ -91,16 +101,14 @@ class Station():
 
     def fertig(self):
         self.busy = False
-        self.buffer.popleft()
+        customer = self.buffer.popleft()  # hier sollten wir uns noch den Customer speichern, da wir diesen noch benötigen um ihn zur nächsten Station zu schicken
         if (len(self.buffer) > 0):
             self.busy = True
             fertig = Ev(EvQueue.time + (self.delay_per_Item * self.buffer[0].shoppinglist[0][3]), self.stationsname,
                         (self.buffer[0], "Fertig"), 1)  # 1 eventuell weg
             EvQueue.push(fertig)
-        
-        
-
-
+            ankunft = Ev(EvQueue.time + customer.shoppinglist[0][0], customer.shoppinglist[0][1], (customer, "Ankunft"),
+                         1)  # 1 eventuell weg ?
 
 
 # please implement here
@@ -116,12 +124,28 @@ class Customer():
     duration = 0
     duration_cond_complete = 0
     count = 0
-# please implement here
+
+    # please implement here
 
     def __init__(self, shoppinglist, id, time):
         self.shoppinglist = shoppinglist
         self.id = id
         self.time = time
+
+    def beginn_einkauf(self):
+        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.shoppinglist[0][1], (self, "Ankunft"), 1) # laufe zur ersten Station
+
+    def ankunft_station(self):
+        if self.shoppinglist[0][1] == baecker.stationsname:
+            Station.anstellen(baecker, self)
+        elif self.shoppinglist[0][1] == metzger.stationsname:
+            Station.anstellen(metzger,self)
+        elif self.shoppinglist[0][1] == kaese.stationsname:
+            Station.anstellen(kaese, self)
+        elif self.shoppinglist[0][1] == kasse.stationsname:
+            Station.anstellen(kasse, self)
+
+    def verlassen_station(self):
 
 
 
@@ -149,7 +173,7 @@ Customer.dropped['Bäcker'] = 0
 Customer.dropped['Metzger'] = 0
 Customer.dropped['Käse'] = 0
 Customer.dropped['Kasse'] = 0
-einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)] # 3 überspringen
+einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]  # 3 überspringen
 einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
 startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
 startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
