@@ -55,6 +55,8 @@ class Ev:
 
 class EvQueue:
     liste = heapq()
+    evCount = 0
+    time = 0
     def push(event):
         heapq.heappush(liste, event)
 
@@ -67,13 +69,38 @@ class EvQueue:
 class Station():
     delay_per_item = 1
     stationsname = "default"
-    busy = false
+    busy = False
     buffer = deque
 
-    def __init__(delay_per_item, name):
+    def __init__(self,delay_per_item, name):
         print("2. Initialize the new instance of Point.")
-        self.delay_per_Item = delay_per_Item
+        self.delay_per_Item = delay_per_item
         self.stationsnamename = name
+
+    def anstellen(self, customer):
+        if (customer.shoppinglist[0][2] <= len(self.buffer)):
+            if (len(self.buffer) == 0 and self.busy == False):
+                self.buffer.append(customer)
+                self.busy = True
+                fertig = Ev(EvQueue.time + (self.delay_per_Item * customer.shoppinglist[0][3]), self.stationsname, (customer, "Fertig"), 1) # 1 eventuell weg
+                EvQueue.push(fertig)
+            else:
+                self.buffer.append(customer)
+        else:
+            customer.shoppinglist.remove(0)
+
+    def fertig(self):
+        self.busy = False
+        self.buffer.popleft()
+        if (len(self.buffer) > 0):
+            self.busy = True
+            fertig = Ev(EvQueue.time + (self.delay_per_Item * self.buffer[0].shoppinglist[0][3]), self.stationsname,
+                        (self.buffer[0], "Fertig"), 1)  # 1 eventuell weg
+            EvQueue.push(fertig)
+        
+        
+
+
 
 
 # please implement here
@@ -90,6 +117,11 @@ class Customer():
     duration_cond_complete = 0
     count = 0
 # please implement here
+
+    def __init__(self, shoppinglist, id, time):
+        self.shoppinglist = shoppinglist
+        self.id = id
+        self.time = time
 
 
 
@@ -117,7 +149,7 @@ Customer.dropped['Bäcker'] = 0
 Customer.dropped['Metzger'] = 0
 Customer.dropped['Käse'] = 0
 Customer.dropped['Kasse'] = 0
-einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]
+einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)] # 3 überspringen
 einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
 startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
 startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
