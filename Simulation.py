@@ -65,6 +65,17 @@ class EvQueue:
 # delay_per_item: service time
 # CustomerWaiting, busy: possible states of this station
 class Station():
+    delay_per_item = 1
+    stationsname = "default"
+    busy = false
+    buffer = deque
+
+    def __init__(delay_per_item, name):
+        print("2. Initialize the new instance of Point.")
+        self.delay_per_Item = delay_per_Item
+        self.stationsnamename = name
+
+
 # please implement here
 
 
