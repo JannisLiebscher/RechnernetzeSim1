@@ -38,14 +38,17 @@ def my_print2(s, msg, name):
 class Ev:
     counter = 0
 
-    def __init__(self, t, work, args=(), prio=255):
-        self.t = t
+    def __init__(self, time, customer, what, prio=255):
+        self.time = time
         self.n = Ev.counter
-        self.work = work
-        self.args = args
+        self.csutomer = customer
+        self.what = what
         self.prio = prio
         Ev.counter += 1
 
+    def __lt__(self, other):
+        re = self.time <= other.time
+        return re
 
 # class consists of
 # q: event queue
@@ -65,15 +68,19 @@ class EvQueue:
 
     def push(self, event):
         heapq.heappush(self.q, event)
+        heapq.heapify(self.q)
 
     def pop(self):
         event = heapq.heappop(self.q)
-        if (event[2][1] == "Beginn"):
-            my_print1(event[2][1].id, event[1], "Beginn")
-        elif (event[2][1] == "Ankunft"):
+        if (event.what == "beginn"):
+            my_print1(event[2][1].id, event[1], "beginn")
+            Customer.anstellen(event.customer)
+        elif (event.what == "anstellen"):
             my_print1(event[2][1].id, event[1], "Ankunft")
-        elif (event[2][1] == "Fertig"):
+            Customer.anstellen(event.customer)
+        elif (event.what == "fertig"):
             my_print1(event[2][1].id, event[1], "Fertig")
+            Customer.fertig(event.customer)
 
 
 # class consists of
@@ -87,6 +94,9 @@ class Station():
     busy = False
     buffer = deque
 
+    def getName(self):
+        return self.stationsname
+
     def __init__(self, delay_per_item, name):
         print("2. Initialize the new instance of Point.")
         self.delay_per_Item = delay_per_item
@@ -98,8 +108,8 @@ class Station():
                 self.buffer.append(customer)
                 self.busy = True
                 fertig = Ev(EvQueue.time + (self.delay_per_Item * Customer.nextStationItemCount(customer)),
-                            self.stationsname,
-                            (customer, "Fertig"),
+                            customer,
+                            "fertig",
                             1) # 1 eventuell weg
                 EvQueue.push(fertig)
             else:
@@ -113,8 +123,8 @@ class Station():
         if (len(self.buffer) > 0):
             self.busy = True
             fertig = Ev(EvQueue.time + (self.delay_per_Item * Customer.nextStationItemCount(self.buffer[0])),
-                        self.stationsname,
-                        (self.buffer[0], "Fertig"),
+                        self.buffer[0],
+                        "fertig",
                         1)  # 1 eventuell weg
             EvQueue.push(fertig)
         createAnstellenEvent(customerDone)
@@ -122,8 +132,8 @@ class Station():
     def createAnstellenEvent(customer):
         Customer.removeCurrentListItem(customer)
         if(Customer.nextStation(customer) != None):
-            anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)), customerDone.shoppinglist[2],
-                            (customer, "Ankunft"), 1)  # 1 eventuell weg
+            anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)),
+                            customer, "ankunft", 1)  # 1 eventuell weg
             EvQueue.push(anstellen)
 
 
@@ -148,10 +158,11 @@ class Customer():
         self.shoppinglist = list(shoppinglist)
         self.id = id
         self.time = time
+        Customer.count += 1
 
-    def beginn_einkauf(self):
-        beginn = Ev(EvQueue.time, None, (self, "Beginn"), 1)
-        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.shoppinglist[0][1], (self, "Ankunft"), 1) # laufe zur ersten Station
+    def run(self):
+        beginn = Ev(EvQueue.time, self, "beginn", 1)
+        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self, "ankunft", 1) # laufe zur ersten Station
 
     def ankunft_station(self):
         if self.nextStation == baecker.stationsname:
@@ -184,37 +195,41 @@ class Customer():
     def nextStationWalkTime(self):
         return self.shoppinglist[0][0]
     def nextStation(self):
-        return self.shoppinglist[0][1]
+        return self.shoppinglist[0][1].getName()
     def nextStationItemCount(self):
         return self.shoppinglist[0][2]
     def nextStationMaxQueue(self):
         return self.shoppinglist[0][3]
+
     def removeCurrentListItem(self):
         self.shoppinglist.remove(0)
+    def nextStationRaw(self):
+        return self.shoppinglist[0][1]
 
 def startCustomers(einkaufsliste, name, sT, dT, mT):
     i = 1
     t = sT
     while t < mT:
         kunde = Customer(list(einkaufsliste), name + str(i), t)
-        ev = Ev(t, kunde.run, prio=1)
+        ev = Ev(t, kunde, "anstellen", prio=1)
         evQ.push(ev)
         i += 1
         t += dT
+    evQ.pop()
 
 
 evQ = EvQueue()
-baecker = Station(10, 'Bäcker')
+baecker = Station(10, 'Baecker')
 metzger = Station(30, 'Metzger')
-kaese = Station(60, 'Käse')
+kaese = Station(60, 'Kaese')
 kasse = Station(5, 'Kasse')
-Customer.served['Bäcker'] = 0
+Customer.served['Baecker'] = 0
 Customer.served['Metzger'] = 0
-Customer.served['Käse'] = 0
+Customer.served['Kaese'] = 0
 Customer.served['Kasse'] = 0
-Customer.dropped['Bäcker'] = 0
+Customer.dropped['Baecker'] = 0
 Customer.dropped['Metzger'] = 0
-Customer.dropped['Käse'] = 0
+Customer.dropped['Kaese'] = 0
 Customer.dropped['Kasse'] = 0
 einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]  # 3 überspringen
 einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
@@ -222,14 +237,13 @@ startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
 startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
 evQ.start()
 my_print('Simulationsende: %is' % EvQueue.time)
-my_print('Anzahl Kunden: %i' % (Customer.count
-                                ))
-my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
+my_print('Anzahl Kunden: %i' % (Customer.count))
+my_print('Anzahl vollstaendige Einkaeufe %i' % Customer.complete)
 x = Customer.duration / Customer.count
 my_print(str('Mittlere Einkaufsdauer %.2fs' % x))
 x = Customer.duration_cond_complete / Customer.complete
-my_print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
-S = ('Bäcker', 'Metzger', 'Käse', 'Kasse')
+my_print('Mittlere Einkaufsdauer (vollstaendig): %.2fs' % x)
+S = ('Baecker', 'Metzger', 'Kaese', 'Kasse')
 for s in S:
     x = Customer.dropped[s] / (Customer.served[s] + Customer.dropped[s]) * 100
     my_print('Drop percentage at %s: %.2f' % (s, x))
