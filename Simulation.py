@@ -46,9 +46,6 @@ class Ev:
         self.prio = prio
         Ev.counter += 1
 
-    def __lt__(self, other):
-        re = self.time <= other.time
-        return re
 
 # class consists of
 # q: event queue
@@ -67,11 +64,10 @@ class EvQueue:
             self.pop()
 
     def push(self, event):
-        heapq.heappush(self.q, event)
-        heapq.heapify(self.q)
+        heapq.heappush(self.q, (event.t, event))
 
     def pop(self):
-        event = heapq.heappop(self.q)
+        event = heapq.heappop(self.q)[1]
         if (event.what == "beginn"):
             my_print1(event[2][1].id, event[1], "beginn")
             Customer.anstellen(event.customer)
@@ -131,7 +127,7 @@ class Station():
 
     def createAnstellenEvent(customer):
         Customer.removeCurrentListItem(customer)
-        if(Customer.nextStation(customer) != None):
+        if Customer.nextStation(customer) is not None:
             anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)),
                             customer, "ankunft", 1)  # 1 eventuell weg
             EvQueue.push(anstellen)
@@ -219,17 +215,17 @@ def startCustomers(einkaufsliste, name, sT, dT, mT):
 
 
 evQ = EvQueue()
-baecker = Station(10, 'Baecker')
+baecker = Station(10, 'Bäcker')
 metzger = Station(30, 'Metzger')
-kaese = Station(60, 'Kaese')
+kaese = Station(60, 'Käse')
 kasse = Station(5, 'Kasse')
-Customer.served['Baecker'] = 0
+Customer.served['Bäcker'] = 0
 Customer.served['Metzger'] = 0
-Customer.served['Kaese'] = 0
+Customer.served['Käse'] = 0
 Customer.served['Kasse'] = 0
-Customer.dropped['Baecker'] = 0
+Customer.dropped['Bäcker'] = 0
 Customer.dropped['Metzger'] = 0
-Customer.dropped['Kaese'] = 0
+Customer.dropped['Käse'] = 0
 Customer.dropped['Kasse'] = 0
 einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]  # 3 überspringen
 einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
@@ -237,13 +233,14 @@ startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
 startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
 evQ.start()
 my_print('Simulationsende: %is' % EvQueue.time)
-my_print('Anzahl Kunden: %i' % (Customer.count))
-my_print('Anzahl vollstaendige Einkaeufe %i' % Customer.complete)
+my_print('Anzahl Kunden: %i' % (Customer.count
+                                ))
+my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
 x = Customer.duration / Customer.count
 my_print(str('Mittlere Einkaufsdauer %.2fs' % x))
 x = Customer.duration_cond_complete / Customer.complete
-my_print('Mittlere Einkaufsdauer (vollstaendig): %.2fs' % x)
-S = ('Baecker', 'Metzger', 'Kaese', 'Kasse')
+my_print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
+S = ('Bäcker', 'Metzger', 'Käse', 'Kasse')
 for s in S:
     x = Customer.dropped[s] / (Customer.served[s] + Customer.dropped[s]) * 100
     my_print('Drop percentage at %s: %.2f' % (s, x))
