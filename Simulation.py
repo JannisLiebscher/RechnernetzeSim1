@@ -68,6 +68,12 @@ class EvQueue:
 
     def pop(self):
         event = heapq.heappop(self.q)
+        if (event[2][1] == "Beginn"):
+            my_print1(event[2][1].id, event[1], "Beginn")
+        elif (event[2][1] == "Ankunft"):
+            my_print1(event[2][1].id, event[1], "Ankunft")
+        elif (event[2][1] == "Fertig"):
+            my_print1(event[2][1].id, event[1], "Fertig")
 
 
 # class consists of
@@ -115,10 +121,10 @@ class Station():
 
     def createAnstellenEvent(customer):
         Customer.removeCurrentListItem(customer)
-        if(Customer.nextStation(customer) == None) return
-        anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)), customerDone.shoppinglist[2],
+        if(Customer.nextStation(customer) != None):
+            anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)), customerDone.shoppinglist[2],
                             (customer, "Ankunft"), 1)  # 1 eventuell weg
-        EvQueue.push(anstellen)
+            EvQueue.push(anstellen)
 
 
 
@@ -139,19 +145,41 @@ class Customer():
     # please implement here
 
     def __init__(self, shoppinglist, id, time):
-        self.shoppinglist = shoppinglist
+        self.shoppinglist = list(shoppinglist)
         self.id = id
         self.time = time
 
-
     def beginn_einkauf(self):
-        ankunft = Ev(EvQueue.time + nextStationWalkTime(self), def nextStation(self), (self, "Ankunft"), 1) # laufe zur ersten Station
+        beginn = Ev(EvQueue.time, None, (self, "Beginn"), 1)
+        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.shoppinglist[0][1], (self, "Ankunft"), 1) # laufe zur ersten Station
 
     def ankunft_station(self):
-        Station.anstellen(nextStation(self), self)
+        if self.nextStation == baecker.stationsname:
+            Station.anstellen(baecker, self)
+        elif self.nextStation == metzger.stationsname:
+            Station.anstellen(metzger,self)
+        elif self.nextStation == kaese.stationsname:
+            Station.anstellen(kaese, self)
+        elif self.nextStation == kasse.stationsname:
+            Station.anstellen(kasse, self)
 
     def verlassen_station(self):
-
+        if self.nextStation == baecker.stationsname:
+            Station.fertig(baecker)
+            self.served[baecker] = True
+            self.complete = self.complete + 1
+        elif self.nextStation == metzger.stationsname:
+            Station.fertig(metzger)
+            self.served[metzger] = True
+            self.complete = self.complete + 1
+        elif self.nextStation == kaese.stationsname:
+            Station.fertig(kaese)
+            self.served[kaese] = True
+            self.complete = self.complete + 1
+        elif self.nextStation == kasse.stationsname:
+            Station.fertig(kasse)
+            self.served[kasse] = True
+            self.complete = self.complete + 1
 
     def nextStationWalkTime(self):
         return self.shoppinglist[0][0]
@@ -188,8 +216,7 @@ Customer.dropped['Bäcker'] = 0
 Customer.dropped['Metzger'] = 0
 Customer.dropped['Käse'] = 0
 Customer.dropped['Kasse'] = 0
-# WalkTime - Name - ItemCount - MaxQueue
-einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)] # 3 überspringen
+einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]  # 3 überspringen
 einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
 startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
 startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
