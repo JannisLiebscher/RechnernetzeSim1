@@ -15,8 +15,8 @@ def my_print(msg):
 # print on console and into customer log
 # k: customer name
 # s: station name
-def my_print1(k, s, msg):
-    t = EvQueue.time
+def my_print1(k, s, msg, time):
+    t = time
     print(str(round(t, 4)) + ':' + k + ' ' + msg + ' at ' + s)
     fc.write(str(round(t, 4)) + ':' + k + ' ' + msg + ' at ' + s + '\n')
 
@@ -57,24 +57,46 @@ class EvQueue:
     q = []
     evCount = 0
     time = 0
-    heapq.heapify(q)
+
+    def heapsort(self, iterable):
+
+        h = []
+
+        for value in iterable:
+            heapq.heappush(h, value)
+
+        return [heapq.heappop(h) for i in range(len(h))]
 
     def start(self):
         while len(self.q) != 0:
             self.pop()
 
     def push(self, event: Ev):
-        heapq.heappush(self.q, (event.t, event))
+        doubleTimes = False
+        for element in self.q:
+            if element[0] == event.t:
+                doubleTimes = True
+        if doubleTimes:
+            heapq.heappush(self.q, (event.t + 1, event))
+            self.q = self.heapsort(self.q)
+        else:
+            heapq.heappush(self.q, (event.t, event))
+            self.q = self.heapsort(self.q)
 
     def pop(self):
         event = self.q.pop(0)
         if (event[1].args[1] == "Beginn"):
-            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Beginn")
+            my_print(f'{event[0]}: Begin {event[1].args[0].id}') #event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Beginn"
+            self.time = event[0]
+            event[1].args[0].beginn_einkauf()
         elif (event[1].args[1] == "Ankunft"):
-            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Ankunft")
+            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Ankunft", event[0])
+            event[1].args[0].ankunft_station()
+            self.time = event[0]
         elif (event[1].args[1] == "Fertig"):
-            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Fertig")
-
+            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Fertig", event[0])
+            event[1].args[0].verlassen_station()
+            self.time = event[0]
 
 # class consists of
 # name: station name
@@ -82,10 +104,9 @@ class EvQueue:
 # delay_per_item: service time
 # CustomerWaiting, busy: possible states of this station
 class Station():
-    delay_per_item = 1
-    #stationsname = "default"
+    # stationsname = "default"
     busy = False
-    buffer = deque
+    buffer = deque([])
 
     def __init__(self, delay_per_item, name):
         print("2. Initialize the new instance of Point.")
@@ -93,19 +114,19 @@ class Station():
         self.stationsname = name
 
     def anstellen(self, customer):
-        if (Customer.nextStationMaxQueue(customer) <= len(self.buffer)):
+        if (customer.shoppinglist[0][3] >= len(self.buffer)):
             if (len(self.buffer) == 0 and self.busy == False):
                 self.buffer.append(customer)
                 self.busy = True
-                fertig = Ev(EvQueue.time + (self.delay_per_Item * Customer.nextStationItemCount(customer)),
-                            customer.verlassen_station(),
+                fertig = Ev(evQ.time + (self.delay_per_Item * Customer.nextStationItemCount(customer)),
+                            customer.verlassen_station,
                             (customer, "Fertig"),
-                            1) # 1 eventuell weg
-                EvQueue.push(fertig)
+                            1)  # 1 eventuell weg
+                evQ.push(fertig)
             else:
                 self.buffer.append(customer)
-        else:
-            createAnstellenEvent(customerDone)
+        #else:
+            # self.createAnstellenEvent(customer)
 
     def fertig(self):
         self.busy = False
@@ -113,20 +134,22 @@ class Station():
         if (len(self.buffer) > 0):
             kunde = self.buffer[0]
             self.busy = True
-            fertig = Ev(EvQueue.time + (self.delay_per_Item * Customer.nextStationItemCount(kunde)),
-                        kunde.verlassen_station(),
+            fertig = Ev(evQ.time + (self.delay_per_Item * Customer.nextStationItemCount(kunde)),
+                        kunde.verlassen_station,
                         (self.buffer[0], "Fertig"),
-                        1)  # 1 eventuell weg
-            EvQueue.push(fertig)
-        createAnstellenEvent(customerDone)
+                        1)
+            evQ.push(fertig)
+        self.createAnstellenEvent(customerDone)
 
     def createAnstellenEvent(self, customer):
-        Customer.removeCurrentListItem(customer)
-        if Customer.nextStation(customer) is not None:
-            anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)), customer.ankunft_station(),
+        customer.shoppinglist.pop(0)
+        if not customer.shoppinglist:
+            customer.duration = evQ.time - customer.startingTime
+            my_print(f'{evQ.time}: Verlassen {customer.id}')
+        else:
+            anstellen = Ev(evQ.time + customer.shoppinglist[0][0] + 1, customer.ankunft_station,
                             (customer, "Ankunft"), 1)  # 1 eventuell weg
-            EvQueue.push(anstellen)
-
+            evQ.push(anstellen)
 
 
 # please implement here
@@ -142,6 +165,7 @@ class Customer():
     duration = 0
     duration_cond_complete = 0
     count = 0
+    startingTime = 0
 
     # please implement here
 
@@ -151,56 +175,65 @@ class Customer():
         self.time = time
 
     def beginn_einkauf(self):
-        beginn = Ev(EvQueue.time, None, (self, "Beginn"), 1)
-        EvQueue.push(beginn)
-        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.ankunft_station(), (self, "Ankunft"), 1) # laufe zur ersten Station
-        EvQueue.push(ankunft)
+        self.startingTime = evQ.time
+        ankunft = Ev(evQ.time + self.nextStationWalkTime(), self.ankunft_station, (self, "Ankunft"),
+                     1)  # laufe zur ersten Station
+        evQ.push(ankunft)
 
     def ankunft_station(self):
-        if self.nextStation.stationsname == baecker.stationsname:
+        if self.shoppinglist[0][1].stationsname == baecker.stationsname:
             Station.anstellen(baecker, self)
-        elif self.nextStation.stationsname == metzger.stationsname:
-            Station.anstellen(metzger,self)
-        elif self.nextStation.stationsname == kaese.stationsname:
+        elif self.shoppinglist[0][1].stationsname == metzger.stationsname:
+            Station.anstellen(metzger, self)
+        elif self.shoppinglist[0][1].stationsname == kaese.stationsname:
             Station.anstellen(kaese, self)
-        elif self.nextStation.stationsname == kasse.stationsname:
+        elif self.shoppinglist[0][1].stationsname == kasse.stationsname:
             Station.anstellen(kasse, self)
 
     def verlassen_station(self):
-        if self.nextStation.stationsname == baecker.stationsname:
-            Station.fertig(baecker)
+        if self.shoppinglist[0][1].stationsname == baecker.stationsname:
             self.served[baecker] = True
             self.complete = self.complete + 1
-        elif self.nextStation.stationsname == metzger.stationsname:
-            Station.fertig(metzger)
+            self.count = self.count + 1
+            Station.fertig(baecker)
+        elif self.shoppinglist[0][1].stationsname == metzger.stationsname:
             self.served[metzger] = True
             self.complete = self.complete + 1
-        elif self.nextStation.stationsname == kaese.stationsname:
-            Station.fertig(kaese)
+            self.count = self.count + 1
+            Station.fertig(metzger)
+        elif self.shoppinglist[0][1].stationsname == kaese.stationsname:
             self.served[kaese] = True
             self.complete = self.complete + 1
-        elif self.nextStation.stationsname   == kasse.stationsname:
-            Station.fertig(kasse)
+            self.count = self.count + 1
+            Station.fertig(kaese)
+        elif self.shoppinglist[0][1].stationsname == kasse.stationsname:
             self.served[kasse] = True
             self.complete = self.complete + 1
+            self.count = self.count + 1
+            Station.fertig(kasse)
 
     def nextStationWalkTime(self):
         return self.shoppinglist[0][0]
+
     def nextStation(self):
         return self.shoppinglist[0][1]
+
     def nextStationItemCount(self):
         return self.shoppinglist[0][2]
+
     def nextStationMaxQueue(self):
         return self.shoppinglist[0][3]
+
     def removeCurrentListItem(self):
         self.shoppinglist.remove(0)
+
 
 def startCustomers(einkaufsliste, name, sT, dT, mT):
     i = 1
     t = sT
     while t < mT:
         kunde = Customer(list(einkaufsliste), name + str(i), t)
-        ev = Ev(t, kunde.beginn_einkauf,(kunde, "Beginn") ,prio=1)
+        ev = Ev(t, kunde.beginn_einkauf, (kunde, "Beginn"), prio=1)
         evQ.push(ev)
         i += 1
         t += dT
@@ -240,4 +273,3 @@ for s in S:
 f.close()
 fc.close()
 fs.close()
-
