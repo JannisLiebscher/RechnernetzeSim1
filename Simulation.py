@@ -63,11 +63,17 @@ class EvQueue:
         while len(self.q) != 0:
             self.pop()
 
-    def push(self, event):
-        heapq.heappush(self.q, event)
+    def push(self, event: Ev):
+        heapq.heappush(self.q, (event.t, event))
 
     def pop(self):
-        event = heapq.heappop(self.q)
+        event = self.q.pop(0)
+        if (event[1].args[1] == "Beginn"):
+            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Beginn")
+        elif (event[1].args[1] == "Ankunft"):
+            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Ankunft")
+        elif (event[1].args[1] == "Fertig"):
+            my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Fertig")
 
 
 # class consists of
@@ -87,28 +93,40 @@ class Station():
         self.stationsname = name
 
     def anstellen(self, customer):
-        if (customer.shoppinglist[0][2] <= len(self.buffer)):
+        if (Customer.nextStationMaxQueue(customer) <= len(self.buffer)):
             if (len(self.buffer) == 0 and self.busy == False):
                 self.buffer.append(customer)
                 self.busy = True
-                fertig = Ev(EvQueue.time + (self.delay_per_Item * customer.shoppinglist[0][3]), self.stationsname,
-                            (customer, "Fertig"), 1)  # 1 eventuell weg
+                fertig = Ev(EvQueue.time + (self.delay_per_Item * Customer.nextStationItemCount(customer)),
+                            customer.verlassen_station(),
+                            (customer, "Fertig"),
+                            1) # 1 eventuell weg
                 EvQueue.push(fertig)
             else:
                 self.buffer.append(customer)
         else:
-            customer.shoppinglist.remove(0)
+            createAnstellenEvent(customerDone)
 
     def fertig(self):
         self.busy = False
-        customer = self.buffer.popleft()  # hier sollten wir uns noch den Customer speichern, da wir diesen noch benötigen um ihn zur nächsten Station zu schicken
+        customerDone = self.buffer.popleft()
         if (len(self.buffer) > 0):
+            kunde = self.buffer[0]
             self.busy = True
-            fertig = Ev(EvQueue.time + (self.delay_per_Item * self.buffer[0].shoppinglist[0][3]), self.stationsname,
-                        (self.buffer[0], "Fertig"), 1)  # 1 eventuell weg
+            fertig = Ev(EvQueue.time + (self.delay_per_Item * Customer.nextStationItemCount(kunde)),
+                        kunde.verlassen_station(),
+                        (self.buffer[0], "Fertig"),
+                        1)  # 1 eventuell weg
             EvQueue.push(fertig)
-            ankunft = Ev(EvQueue.time + customer.shoppinglist[0][0], customer.shoppinglist[0][1], (customer, "Ankunft"),
-                         1)  # 1 eventuell weg ?
+        createAnstellenEvent(customerDone)
+
+    def createAnstellenEvent(self, customer):
+        Customer.removeCurrentListItem(customer)
+        if Customer.nextStation(customer) is not None:
+            anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)), customer.ankunft_station(),
+                            (customer, "Ankunft"), 1)  # 1 eventuell weg
+            EvQueue.push(anstellen)
+
 
 
 # please implement here
@@ -128,33 +146,61 @@ class Customer():
     # please implement here
 
     def __init__(self, shoppinglist, id, time):
-        self.shoppinglist = shoppinglist
+        self.shoppinglist = list(shoppinglist)
         self.id = id
         self.time = time
 
     def beginn_einkauf(self):
-        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.shoppinglist[0][1], (self, "Ankunft"), 1) # laufe zur ersten Station
+        beginn = Ev(EvQueue.time, None, (self, "Beginn"), 1)
+        EvQueue.push(beginn)
+        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.ankunft_station(), (self, "Ankunft"), 1) # laufe zur ersten Station
+        EvQueue.push(ankunft)
 
     def ankunft_station(self):
-        if self.shoppinglist[0][1] == baecker.stationsname:
+        if self.nextStation.stationsname == baecker.stationsname:
             Station.anstellen(baecker, self)
-        elif self.shoppinglist[0][1] == metzger.stationsname:
+        elif self.nextStation.stationsname == metzger.stationsname:
             Station.anstellen(metzger,self)
-        elif self.shoppinglist[0][1] == kaese.stationsname:
+        elif self.nextStation.stationsname == kaese.stationsname:
             Station.anstellen(kaese, self)
-        elif self.shoppinglist[0][1] == kasse.stationsname:
+        elif self.nextStation.stationsname == kasse.stationsname:
             Station.anstellen(kasse, self)
 
     def verlassen_station(self):
+        if self.nextStation.stationsname == baecker.stationsname:
+            Station.fertig(baecker)
+            self.served[baecker] = True
+            self.complete = self.complete + 1
+        elif self.nextStation.stationsname == metzger.stationsname:
+            Station.fertig(metzger)
+            self.served[metzger] = True
+            self.complete = self.complete + 1
+        elif self.nextStation.stationsname == kaese.stationsname:
+            Station.fertig(kaese)
+            self.served[kaese] = True
+            self.complete = self.complete + 1
+        elif self.nextStation.stationsname   == kasse.stationsname:
+            Station.fertig(kasse)
+            self.served[kasse] = True
+            self.complete = self.complete + 1
 
-
+    def nextStationWalkTime(self):
+        return self.shoppinglist[0][0]
+    def nextStation(self):
+        return self.shoppinglist[0][1]
+    def nextStationItemCount(self):
+        return self.shoppinglist[0][2]
+    def nextStationMaxQueue(self):
+        return self.shoppinglist[0][3]
+    def removeCurrentListItem(self):
+        self.shoppinglist.remove(0)
 
 def startCustomers(einkaufsliste, name, sT, dT, mT):
     i = 1
     t = sT
     while t < mT:
         kunde = Customer(list(einkaufsliste), name + str(i), t)
-        ev = Ev(t, kunde.run, prio=1)
+        ev = Ev(t, kunde.beginn_einkauf,(kunde, "Beginn") ,prio=1)
         evQ.push(ev)
         i += 1
         t += dT
