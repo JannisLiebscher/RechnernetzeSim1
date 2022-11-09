@@ -99,7 +99,7 @@ class Station():
             else:
                 self.buffer.append(customer)
         else:
-            Customer.removeCurrentListItem(customer)
+            createAnstellenEvent(customerDone)
 
     def fertig(self):
         self.busy = False
@@ -111,10 +111,14 @@ class Station():
                         (self.buffer[0], "Fertig"),
                         1)  # 1 eventuell weg
             EvQueue.push(fertig)
-        anstellen = Ev(EvQueue.time + (customerDone.shoppinglist[0][0]), customerDone.shoppinglist[2],
-                    (customerDone, "Ankunft"), 1)  # 1 eventuell weg
-        EvQueue.push(anstellen)
+        createAnstellenEvent(customerDone)
 
+    def createAnstellenEvent(customer):
+        Customer.removeCurrentListItem(customer)
+        if(Customer.nextStation(customer) == None) return
+        anstellen = Ev(EvQueue.time + (nextStationWalkTime(customer)), customerDone.shoppinglist[2],
+                            (customer, "Ankunft"), 1)  # 1 eventuell weg
+        EvQueue.push(anstellen)
 
 
 
@@ -139,33 +143,24 @@ class Customer():
         self.id = id
         self.time = time
 
-    def nextStationWalkTime(self):
-        return self.shoppinglist[0][0]
 
-    def nextStation(self):
-        return self.shoppinglist[0][1]
     def beginn_einkauf(self):
-        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.shoppinglist[0][1], (self, "Ankunft"), 1) # laufe zur ersten Station
+        ankunft = Ev(EvQueue.time + nextStationWalkTime(self), def nextStation(self), (self, "Ankunft"), 1) # laufe zur ersten Station
 
     def ankunft_station(self):
-        if self.shoppinglist[0][1] == baecker.stationsname:
-            Station.anstellen(baecker, self)
-        elif self.shoppinglist[0][1] == metzger.stationsname:
-            Station.anstellen(metzger,self)
-        elif self.shoppinglist[0][1] == kaese.stationsname:
-            Station.anstellen(kaese, self)
-        elif self.shoppinglist[0][1] == kasse.stationsname:
-            Station.anstellen(kasse, self)
+        Station.anstellen(nextStation(self), self)
 
     def verlassen_station(self):
 
 
+    def nextStationWalkTime(self):
+        return self.shoppinglist[0][0]
+    def nextStation(self):
+        return self.shoppinglist[0][1]
     def nextStationItemCount(self):
         return self.shoppinglist[0][2]
-
     def nextStationMaxQueue(self):
         return self.shoppinglist[0][3]
-
     def removeCurrentListItem(self):
         self.shoppinglist.remove(0)
 
