@@ -54,11 +54,20 @@ class Ev:
 # methods push, pop, and start as described in the problem description
 
 class EvQueue:
-    liste = heapq
+    q = []
     evCount = 0
     time = 0
-    def push(event):
-        heapq.heappush(liste, event)
+    heapq.heapify(q)
+
+    def start(self):
+        while len(self.q) != 0:
+            self.pop()
+
+    def push(self, event):
+        heapq.heappush(self.q, event)
+
+    def pop(self):
+        event = heapq.heappop(self.q)
 
 
 # class consists of
@@ -68,14 +77,14 @@ class EvQueue:
 # CustomerWaiting, busy: possible states of this station
 class Station():
     delay_per_item = 1
-    stationsname = "default"
+    #stationsname = "default"
     busy = False
     buffer = deque
 
-    def __init__(self,delay_per_item, name):
+    def __init__(self, delay_per_item, name):
         print("2. Initialize the new instance of Point.")
         self.delay_per_Item = delay_per_item
-        self.stationsnamename = name
+        self.stationsname = name
 
     def anstellen(self, customer):
         if (Customer.nextStationMaxQueue(customer) <= len(self.buffer)):
@@ -123,6 +132,8 @@ class Customer():
     duration_cond_complete = 0
     count = 0
 
+    # please implement here
+
     def __init__(self, shoppinglist, id, time):
         self.shoppinglist = shoppinglist
         self.id = id
@@ -133,6 +144,21 @@ class Customer():
 
     def nextStation(self):
         return self.shoppinglist[0][1]
+    def beginn_einkauf(self):
+        ankunft = Ev(EvQueue.time + self.shoppinglist[0][0], self.shoppinglist[0][1], (self, "Ankunft"), 1) # laufe zur ersten Station
+
+    def ankunft_station(self):
+        if self.shoppinglist[0][1] == baecker.stationsname:
+            Station.anstellen(baecker, self)
+        elif self.shoppinglist[0][1] == metzger.stationsname:
+            Station.anstellen(metzger,self)
+        elif self.shoppinglist[0][1] == kaese.stationsname:
+            Station.anstellen(kaese, self)
+        elif self.shoppinglist[0][1] == kasse.stationsname:
+            Station.anstellen(kasse, self)
+
+    def verlassen_station(self):
+
 
     def nextStationItemCount(self):
         return self.shoppinglist[0][2]
@@ -189,3 +215,4 @@ for s in S:
 f.close()
 fc.close()
 fs.close()
+
