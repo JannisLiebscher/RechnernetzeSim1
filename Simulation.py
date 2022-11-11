@@ -146,7 +146,10 @@ class Station():
             self.skippedStation(customer)
 
     def skippedStation(self, customer):
-        my_print1(customer.id, self.stationsname, "skipped", evQ.time)
+        my_print1(customer.id, self.stationsname, "skipped, because Stations q was this long: " + str(len(self.buffer)) + " | customer waiting time was: " + str(customer.nextStationMaxQueue()), evQ.time)
+        customer.allDone = False
+        Customer.complete = Customer.complete - 1
+        Customer.dropped[self.stationsname] += 1
         customer.shoppinglist.pop(0)
         if not customer.shoppinglist:
             customer.duration = evQ.time - customer.startingTime
@@ -172,7 +175,10 @@ class Station():
     def createAnstellenEvent(self, customer):
         customer.shoppinglist.pop(0)
         if not customer.shoppinglist:
-            customer.duration = evQ.time - customer.startingTime
+            Customer.duration = Customer.duration + (evQ.time - customer.startingTime)
+            if customer.allDone:
+                Customer.complete = Customer.complete + 1
+                Customer.duration_cond_complete = Customer.duration_cond_complete + (evQ.time - customer.startingTime)
             my_print(f'{evQ.time}: Verlassen {customer.id}')
         else:
             anstellen = Ev(evQ.time + customer.shoppinglist[0][0] + 1, customer.ankunft_station,
@@ -194,6 +200,7 @@ class Customer():
     duration_cond_complete = 0
     count = 0
     startingTime = 0
+    allDone = True
 
     # please implement here
 
@@ -203,6 +210,7 @@ class Customer():
         self.time = time
 
     def beginn_einkauf(self):
+        Customer.count = Customer.count + 1
         self.startingTime = evQ.time
         ankunft = Ev(evQ.time + self.nextStationWalkTime(), self.ankunft_station, (self, "Ankunft"),
                      1)  # laufe zur ersten Station
@@ -220,24 +228,16 @@ class Customer():
 
     def verlassen_station(self):
         if self.shoppinglist[0][1].stationsname == baecker.stationsname:
-            self.served[baecker] = True
-            self.complete = self.complete + 1
-            self.count = self.count + 1
+            Customer.served[baecker.stationsname] += 1
             Station.fertig(baecker)
         elif self.shoppinglist[0][1].stationsname == metzger.stationsname:
-            self.served[metzger] = True
-            self.complete = self.complete + 1
-            self.count = self.count + 1
+            Customer.served[metzger.stationsname] += 1
             Station.fertig(metzger)
         elif self.shoppinglist[0][1].stationsname == kaese.stationsname:
-            self.served[kaese] = True
-            self.complete = self.complete + 1
-            self.count = self.count + 1
+            Customer.served[kaese.stationsname] += 1
             Station.fertig(kaese)
         elif self.shoppinglist[0][1].stationsname == kasse.stationsname:
-            self.served[kasse] = True
-            self.complete = self.complete + 1
-            self.count = self.count + 1
+            Customer.served[kasse.stationsname] += 1
             Station.fertig(kasse)
 
     def nextStationWalkTime(self):
@@ -285,7 +285,7 @@ einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
 startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
 startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
 evQ.start()
-my_print('Simulationsende: %is' % EvQueue.time)
+my_print('Simulationsende: %is' % evQ.time)
 my_print('Anzahl Kunden: %i' % (Customer.count
                                 ))
 my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
