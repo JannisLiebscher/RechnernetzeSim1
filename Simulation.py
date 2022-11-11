@@ -148,7 +148,6 @@ class Station():
     def skippedStation(self, customer):
         my_print1(customer.id, self.stationsname, "skipped, because Stations q was this long: " + str(len(self.buffer)) + " | customer waiting time was: " + str(customer.nextStationMaxQueue()), evQ.time)
         customer.allDone = False
-        Customer.complete = Customer.complete - 1
         Customer.dropped[self.stationsname] += 1
         customer.shoppinglist.pop(0)
         if not customer.shoppinglist:
