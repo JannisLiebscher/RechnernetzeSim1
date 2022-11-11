@@ -65,38 +65,55 @@ class EvQueue:
         for value in iterable:
             heapq.heappush(h, value)
 
-        return [heapq.heappop(h) for i in range(len(h))]
+        return [heapq.heappop(h)for i in range(len(h))]
 
     def start(self):
         while len(self.q) != 0:
             self.pop()
 
+    def checkNextFreeSpot(self, event, firstEvent):
+        startIndex = self.q.index(firstEvent)
+        event.t = event.t + 1
+        for x2 in range(startIndex + 1, len(self.q)):
+            tmp = self.q[x2][0]
+            if tmp == event.t:
+                event.t = event.t + 1
+            else:
+                break
+
+
     def push(self, event: Ev):
-        doubleTimes = False
         for element in self.q:
-            if element[0] == event.t:
-                doubleTimes = True
-        if doubleTimes:
-            heapq.heappush(self.q, (event.t + 1, event))
-            self.q = self.heapsort(self.q)
-        else:
-            heapq.heappush(self.q, (event.t, event))
-            self.q = self.heapsort(self.q)
+            if event.t == element[0]:
+                self.checkNextFreeSpot(event, element)
+        heapq.heappush(self.q, (event.t, event))
+        self.q = self.heapsort(self.q)
+    #def push(self, event: Ev):
+    #    doubleTimes = False
+    #    for element in self.q:
+    #        if element[0] == event.t:
+    #            doubleTimes = True
+    #    if doubleTimes:
+    #         heapq.heappush(self.q, (event.t + 1, event))
+    #       self.q = self.heapsort(self.q)
+    #    else:
+    #        heapq.heappush(self.q, (event.t, event))
+    #        self.q = self.heapsort(self.q)
 
     def pop(self):
         event = self.q.pop(0)
+        self.time = event[0]
         if (event[1].args[1] == "Beginn"):
-            my_print(f'{event[0]}: Begin {event[1].args[0].id}') #event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Beginn"
-            self.time = event[0]
+            my_print(
+                f'{event[0]}: Begin {event[1].args[0].id}')  # event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Beginn"
             event[1].args[0].beginn_einkauf()
         elif (event[1].args[1] == "Ankunft"):
             my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Ankunft", event[0])
             event[1].args[0].ankunft_station()
-            self.time = event[0]
         elif (event[1].args[1] == "Fertig"):
             my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Fertig", event[0])
             event[1].args[0].verlassen_station()
-            self.time = event[0]
+
 
 # class consists of
 # name: station name
@@ -105,28 +122,39 @@ class EvQueue:
 # CustomerWaiting, busy: possible states of this station
 class Station():
     # stationsname = "default"
-    busy = False
-    buffer = deque([])
 
     def __init__(self, delay_per_item, name):
         print("2. Initialize the new instance of Point.")
         self.delay_per_Item = delay_per_item
         self.stationsname = name
+        self.buffer = deque([])
+        self.busy = False
 
     def anstellen(self, customer):
         if (customer.shoppinglist[0][3] >= len(self.buffer)):
             if (len(self.buffer) == 0 and self.busy == False):
                 self.buffer.append(customer)
                 self.busy = True
-                fertig = Ev(evQ.time + (self.delay_per_Item * Customer.nextStationItemCount(customer)),
+                fertig = Ev(evQ.time + (self.delay_per_Item * customer.shoppinglist[0][2]),
                             customer.verlassen_station,
                             (customer, "Fertig"),
                             1)  # 1 eventuell weg
                 evQ.push(fertig)
             else:
                 self.buffer.append(customer)
-        #else:
-            # self.createAnstellenEvent(customer)
+        else:
+            self.skippedStation(customer)
+
+    def skippedStation(self, customer):
+        my_print1(customer.id, self.stationsname, "skipped", evQ.time)
+        customer.shoppinglist.pop(0)
+        if not customer.shoppinglist:
+            customer.duration = evQ.time - customer.startingTime
+            my_print(f'{evQ.time}: Verlassen {customer.id}')
+        else:
+            anstellen = Ev(evQ.time + customer.shoppinglist[0][0] + 1, customer.ankunft_station,
+                           (customer, "Ankunft"), 1)  # 1 eventuell weg
+            evQ.push(anstellen)
 
     def fertig(self):
         self.busy = False
@@ -134,7 +162,7 @@ class Station():
         if (len(self.buffer) > 0):
             kunde = self.buffer[0]
             self.busy = True
-            fertig = Ev(evQ.time + (self.delay_per_Item * Customer.nextStationItemCount(kunde)),
+            fertig = Ev(evQ.time + (self.delay_per_Item * kunde.shoppinglist[0][2]),
                         kunde.verlassen_station,
                         (self.buffer[0], "Fertig"),
                         1)
@@ -148,7 +176,7 @@ class Station():
             my_print(f'{evQ.time}: Verlassen {customer.id}')
         else:
             anstellen = Ev(evQ.time + customer.shoppinglist[0][0] + 1, customer.ankunft_station,
-                            (customer, "Ankunft"), 1)  # 1 eventuell weg
+                           (customer, "Ankunft"), 1)  # 1 eventuell weg
             evQ.push(anstellen)
 
 
