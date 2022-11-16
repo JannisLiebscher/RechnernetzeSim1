@@ -111,7 +111,6 @@ class Customer(Thread):
             if len(self.nextStation().buffer) >= self.skipAt():
                 Customer.dropped[self.nextStation().stationsname] += 1
                 self.allDone = False
-                print(self.nextStation().stationsname + " Länge der Schlange: " + str(len(self.nextStation().buffer)))
                 print(self.id + ": Überspringe Station " + self.nextStation().stationsname)
                 self.removeCurrentListItem()
                 continue
