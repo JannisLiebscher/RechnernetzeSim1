@@ -2,14 +2,14 @@ from threading import Thread
 import time
 from threading import Condition
 import logging
-
+import datetime
 from collections import deque
 import heapq
 
 # f = open("supermarkt.txt", "w")
 # fc = open("supermarkt_customer.txt", "w")
 # fs = open("supermarkt_station.txt", "w")
-SCALING = 0.2
+SCALING = 0.001
 
 # print on console and into supermarket log
 def my_print(msg):
@@ -95,6 +95,7 @@ class Customer(Thread):
         self.time = time
         self.skipped = False
         self.condition = Condition()
+        self.start_time = datetime.datetime.now()
 
 
     def run(self):
@@ -104,6 +105,10 @@ class Customer(Thread):
             print(self.id + ": Laufe zu Station " + self.nextStation().stationsname)
             time.sleep(self.nextStationWalkTime() * SCALING)
             # An Station anstellen
+            if len(self.nextStation().buffer) >= self.skipAt()
+                print(self.id + ": Überspringe Station " + self.nextStation().stationsname)
+                self.removeCurrentListItem()
+                continue
             self.nextStation().buffer.append(self)
             # Station benachrichtigen
             self.nextStation().condition.acquire()
@@ -115,13 +120,14 @@ class Customer(Thread):
             self.condition.release()
             print(self.id + ": Fertig an Station " + self.nextStation().stationsname)
             self.removeCurrentListItem()
+        self.finish_time = datetime.datetime.now()
 
     def nextStationWalkTime(self):
         return self.shoppinglist[0][0]
-
     def nextStation(self):
         return self.shoppinglist[0][1]
-
+    def skipAt(self):
+        return self.shoppinglist[0][2]
     def removeCurrentListItem(self):
         hauAb = self.shoppinglist[0]
         self.shoppinglist.remove(hauAb)
@@ -137,8 +143,10 @@ def startCustomers(einkaufslisteA, nameA, einkaufslisteB, nameB):
         if i < 9:
             kundeA = Customer(list(einkaufslisteA), "A" + str(i), startA + delayA * i)
             kundeA.start()
+            customerThreads.append(kundeA)
         kundeB = Customer(list(einkaufslisteB), "B" + str(i), startB + delayB * i)
         kundeB.start()
+        customerThreads.append(kundeB)
         i += 1
 
 if __name__ == "__main__":
@@ -158,9 +166,23 @@ if __name__ == "__main__":
     Customer.dropped['Metzger'] = 0
     Customer.dropped['Käse'] = 0
     Customer.dropped['Kasse'] = 0
+    # WalkTime Station Skip ItemAmmount
     einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]
     einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
+    customerThreads = []
+    print(" --- Start der Simulation --- ")
+    simulation_start = datetime.datetime.now()
     startCustomers(einkaufsliste1, 'A', einkaufsliste2, 'B')
+    print(customerThreads)
+    for k in customerThreads:
+        k.join()
+    simulation_end = datetime.datetime.now()
+    print(" --- Ende der Simulation --- ")
+    # Kill the stations
+    baecker.kill = True
+    metzger.kill = True
+    kaese.kill = True
+    kasse.kill = True
     #my_print('Simulationsende: %is' % evQ.time)
     # my_print('Anzahl Kunden: %i' % (Customer.count
     #                                 ))
