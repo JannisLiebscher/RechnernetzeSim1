@@ -29,7 +29,7 @@ def my_print1(k, s, msg, time):
 # s: station name
 # name: customer name
 def my_print2(s, msg, name):
-    t = EvQueue.time
+    #t = EvQueue.time
     # print(str(round(t,4))+':'+s+' '+msg)
     fs.write(str(round(t, 4)) + ':' + s + ' ' + msg + ' ' + name + '\n')
 
@@ -126,6 +126,7 @@ class Customer:
         self.time = time
         self.skipped = False
         self.condition = threading.Condition()
+        time.sleep(time)
         self.tasks()
 
     def tasks(self):
@@ -188,14 +189,19 @@ class Customer:
         self.shoppinglist.remove(0)
 
 
-def startCustomers(einkaufsliste, name, sT, dT, mT):
-    i = 1
-    t = sT
-    while t < mT:
-        kunde = threading.Thread(target=Customer, args=(list(einkaufsliste), name + str(i), t))
-        kunde.start()
+def startCustomers(einkaufslisteA, nameA, einkaufslisteB, nameB):
+    i = 0
+    delayA = 200
+    delayB = 60
+    startA = 0
+    startB = 1
+    while i < 30:
+        if i < 9:
+            kundeA = threading.Thread(target=Customer, args=(list(einkaufslisteA), nameA + str(i), startA + delayA * i))
+            kundeA.start()
+        kundeB = threading.Thread(target=Customer, args=(list(einkaufslisteB), nameB + str(i), startB + delayB * i))
+        kundeB.start()
         i += 1
-        t += dT
 
 
 baecker = threading.Thread(target=Station, args=(10,'Bäcker'))
@@ -216,9 +222,8 @@ Customer.dropped['Käse'] = 0
 Customer.dropped['Kasse'] = 0
 einkaufsliste1 = [(10, baecker, 10, 10), (30, metzger, 5, 10), (45, kaese, 3, 5), (60, kasse, 30, 20)]
 einkaufsliste2 = [(30, metzger, 2, 5), (30, kasse, 3, 20), (20, baecker, 3, 20)]
-startCustomers(einkaufsliste1, 'A', 0, 200, 30 * 60 + 1)
-startCustomers(einkaufsliste2, 'B', 1, 60, 30 * 60 + 1)
-my_print('Simulationsende: %is' % evQ.time)
+startCustomers(einkaufsliste1, 'A', einkaufsliste2, 'B')
+#my_print('Simulationsende: %is' % evQ.time)
 my_print('Anzahl Kunden: %i' % (Customer.count
                                 ))
 my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
