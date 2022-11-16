@@ -9,7 +9,7 @@ import heapq
 # f = open("supermarkt.txt", "w")
 # fc = open("supermarkt_customer.txt", "w")
 # fs = open("supermarkt_station.txt", "w")
-SCALING = 0.1
+SCALING = 0.2
 
 # print on console and into supermarket log
 def my_print(msg):
@@ -50,22 +50,26 @@ class Station(Thread):
         self.buffer = deque([])
         self.busy = False
         self.condition = Condition()
+        self.kill = False
 
     def run(self):
         self.condition.acquire()
         self.condition.wait()
         self.condition.release()
-        while not self.killEv.is_set():
+        while not self.kill:
             self.condition.acquire()
             if len(self.buffer) != 0:
                 customer = self.buffer.popleft()
+                print(self.stationsname + ": Bediene Customer " + customer.id)
                 self.condition.release()
                 time.sleep(self.delay_per_Item * customer.shoppinglist[0][2] * SCALING)
+                print(self.stationsname + ": Customer " + customer.id + " ist fertig")
                 self.condition.acquire()
-                cutomer.condition.acquire()
-                cutomer.condition.notify()
-                cutomer.condition.release()
+                customer.condition.acquire()
+                customer.condition.notify()
+                customer.condition.release()
             else:
+                print(self.stationsname + ": Kein Customer in der Schlange")
                 self.condition.wait()
             self.condition.release()
 
@@ -94,21 +98,23 @@ class Customer(Thread):
 
 
     def run(self):
-        time.sleep(time * SCALING)
-        while not self.shoppinglist.isEmpyt():
+        time.sleep(self.time * SCALING)
+        while len(self.shoppinglist)!=0:
             # Läuft zur Station
-            time.sleep(nextSTationWalkTime() * SCALING)
+            print(self.id + ": Laufe zu Station " + self.nextStation().stationsname)
+            time.sleep(self.nextStationWalkTime() * SCALING)
             # An Station anstellen
-            nextStation().buffer.append(self)
+            self.nextStation().buffer.append(self)
             # Station benachrichtigen
-            nextStation().acquire()
-            nextStation().notify()
-            nextStation().release()
-            # Warten auf abshcluss an der Station
+            self.nextStation().condition.acquire()
+            self.nextStation().condition.notify()
+            self.nextStation().condition.release()
+            # Warten auf abschluss an der Station
             self.condition.acquire()
             self.condition.wait()
             self.condition.release()
-            removeCurrentListItem()
+            print(self.id + ": Fertig an Station " + self.nextStation().stationsname)
+            self.removeCurrentListItem()
 
     def nextStationWalkTime(self):
         return self.shoppinglist[0][0]
@@ -116,14 +122,9 @@ class Customer(Thread):
     def nextStation(self):
         return self.shoppinglist[0][1]
 
-    def nextStationItemCount(self):
-        return self.shoppinglist[0][2]
-
-    def nextStationMaxQueue(self):
-        return self.shoppinglist[0][3]
-
     def removeCurrentListItem(self):
-        self.shoppinglist.remove(0)
+        hauAb = self.shoppinglist[0]
+        self.shoppinglist.remove(hauAb)
 
 
 def startCustomers(einkaufslisteA, nameA, einkaufslisteB, nameB):
@@ -134,9 +135,9 @@ def startCustomers(einkaufslisteA, nameA, einkaufslisteB, nameB):
     startB = 1
     while i < 30:
         if i < 9:
-            kundeA = Customer(list(einkaufslisteA), nameA + str(i), startA + delayA * i)
+            kundeA = Customer(list(einkaufslisteA), "A" + str(i), startA + delayA * i)
             kundeA.start()
-        kundeB = Customer(list(einkaufslisteB), nameB + str(i), startB + delayB * i)
+        kundeB = Customer(list(einkaufslisteB), "B" + str(i), startB + delayB * i)
         kundeB.start()
         i += 1
 
