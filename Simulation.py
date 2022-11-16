@@ -65,7 +65,7 @@ class EvQueue:
         for value in iterable:
             heapq.heappush(h, value)
 
-        return [heapq.heappop(h)for i in range(len(h))]
+        return [heapq.heappop(h) for i in range(len(h))]
 
     def start(self):
         while len(self.q) != 0:
@@ -81,36 +81,24 @@ class EvQueue:
             else:
                 break
 
-
     def push(self, event: Ev):
         for element in self.q:
             if event.t == element[0]:
                 self.checkNextFreeSpot(event, element)
         heapq.heappush(self.q, (event.t, event))
         self.q = self.heapsort(self.q)
-    #def push(self, event: Ev):
-    #    doubleTimes = False
-    #    for element in self.q:
-    #        if element[0] == event.t:
-    #            doubleTimes = True
-    #    if doubleTimes:
-    #         heapq.heappush(self.q, (event.t + 1, event))
-    #       self.q = self.heapsort(self.q)
-    #    else:
-    #        heapq.heappush(self.q, (event.t, event))
-    #        self.q = self.heapsort(self.q)
 
     def pop(self):
         event = self.q.pop(0)
         self.time = event[0]
-        if (event[1].args[1] == "Beginn"):
+        if event[1].args[1] == "Beginn":
             my_print(
                 f'{event[0]}: Begin {event[1].args[0].id}')  # event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Beginn"
             event[1].args[0].beginn_einkauf()
-        elif (event[1].args[1] == "Ankunft"):
+        elif event[1].args[1] == "Ankunft":
             my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Ankunft", event[0])
             event[1].args[0].ankunft_station()
-        elif (event[1].args[1] == "Fertig"):
+        elif event[1].args[1] == "Fertig":
             my_print1(event[1].args[0].id, event[1].args[0].nextStation().stationsname, "Fertig", event[0])
             event[1].args[0].verlassen_station()
 
@@ -131,8 +119,8 @@ class Station():
         self.busy = False
 
     def anstellen(self, customer):
-        if (customer.shoppinglist[0][3] >= len(self.buffer)):
-            if (len(self.buffer) == 0 and self.busy == False):
+        if customer.shoppinglist[0][3] >= len(self.buffer):
+            if len(self.buffer) == 0 and self.busy == False:
                 self.buffer.append(customer)
                 self.busy = True
                 fertig = Ev(evQ.time + (self.delay_per_Item * customer.shoppinglist[0][2]),
@@ -146,7 +134,8 @@ class Station():
             self.skippedStation(customer)
 
     def skippedStation(self, customer):
-        my_print1(customer.id, self.stationsname, "skipped, because Stations q was this long: " + str(len(self.buffer)) + " | customer waiting time was: " + str(customer.nextStationMaxQueue()), evQ.time)
+        my_print1(customer.id, self.stationsname, "skipped, because Stations q was this long: " + str(
+            len(self.buffer)) + " | customer waiting time was: " + str(customer.nextStationMaxQueue()), evQ.time)
         customer.allDone = False
         Customer.dropped[self.stationsname] += 1
         customer.shoppinglist.pop(0)
@@ -161,7 +150,7 @@ class Station():
     def fertig(self):
         self.busy = False
         customerDone = self.buffer.popleft()
-        if (len(self.buffer) > 0):
+        if len(self.buffer) > 0:
             kunde = self.buffer[0]
             self.busy = True
             fertig = Ev(evQ.time + (self.delay_per_Item * kunde.shoppinglist[0][2]),

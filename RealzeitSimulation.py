@@ -9,7 +9,8 @@ import heapq
 # f = open("supermarkt.txt", "w")
 # fc = open("supermarkt_customer.txt", "w")
 # fs = open("supermarkt_station.txt", "w")
-SCALING = 0.001
+SCALING = 0.003
+
 
 # print on console and into supermarket log
 def my_print(msg):
@@ -30,9 +31,10 @@ def my_print1(k, s, msg, time):
 # s: station name
 # name: customer name
 def my_print2(s, msg, name):
-    #t = EvQueue.time
+    # t = EvQueue.time
     # print(str(round(t,4))+':'+s+' '+msg)
     fs.write(str(round(t, 4)) + ':' + s + ' ' + msg + ' ' + name + '\n')
+
 
 # class consists of
 # name: station name
@@ -73,6 +75,7 @@ class Station(Thread):
                 self.condition.wait()
             self.condition.release()
 
+
 # class consists of
 # statistics variables
 # and methods as described in the problem description
@@ -95,17 +98,20 @@ class Customer(Thread):
         self.time = time
         self.skipped = False
         self.condition = Condition()
-        self.start_time = datetime.datetime.now()
-
+        self.start_time = 0
 
     def run(self):
         time.sleep(self.time * SCALING)
-        while len(self.shoppinglist)!=0:
+        self.start_time = datetime.datetime.now()
+        while len(self.shoppinglist) != 0:
             # Läuft zur Station
             print(self.id + ": Laufe zu Station " + self.nextStation().stationsname)
             time.sleep(self.nextStationWalkTime() * SCALING)
             # An Station anstellen
-            if len(self.nextStation().buffer) >= self.skipAt()
+            if len(self.nextStation().buffer) >= self.skipAt():
+                Customer.dropped[self.nextStation().stationsname] += 1
+                self.allDone = False
+                print(self.nextStation().stationsname + " Länge der Schlange: " + str(len(self.nextStation().buffer)))
                 print(self.id + ": Überspringe Station " + self.nextStation().stationsname)
                 self.removeCurrentListItem()
                 continue
@@ -118,16 +124,23 @@ class Customer(Thread):
             self.condition.acquire()
             self.condition.wait()
             self.condition.release()
+            Customer.served[self.nextStation().stationsname] += 1
             print(self.id + ": Fertig an Station " + self.nextStation().stationsname)
             self.removeCurrentListItem()
+        if self.allDone:
+            Customer.complete += 1
         self.finish_time = datetime.datetime.now()
+        Customer.duration += self.finish_time - self.start_time
 
     def nextStationWalkTime(self):
         return self.shoppinglist[0][0]
+
     def nextStation(self):
         return self.shoppinglist[0][1]
+
     def skipAt(self):
-        return self.shoppinglist[0][2]
+        return self.shoppinglist[0][3]
+
     def removeCurrentListItem(self):
         hauAb = self.shoppinglist[0]
         self.shoppinglist.remove(hauAb)
@@ -140,20 +153,23 @@ def startCustomers(einkaufslisteA, nameA, einkaufslisteB, nameB):
     startA = 0
     startB = 1
     while i < 30:
-        if i < 9:
-            kundeA = Customer(list(einkaufslisteA), "A" + str(i), startA + delayA * i)
+        if i < 10:
+            kundeA = Customer(list(einkaufslisteA), "A" + str(i), startA + delayA * i )
+            Customer.count = Customer.count + 1
             kundeA.start()
             customerThreads.append(kundeA)
-        kundeB = Customer(list(einkaufslisteB), "B" + str(i), startB + delayB * i)
+        kundeB = Customer(list(einkaufslisteB), "B" + str(i), startB + delayB * i )
+        Customer.count = Customer.count + 1
         kundeB.start()
         customerThreads.append(kundeB)
         i += 1
 
+
 if __name__ == "__main__":
-    baecker = Station(10,'Bäcker')
-    metzger = Station(30,'Metzger')
-    kaese = Station(60,'Käse')
-    kasse = Station(5,'Kasse')
+    baecker = Station(10, 'Bäcker')
+    metzger = Station(30, 'Metzger')
+    kaese = Station(60, 'Käse')
+    kasse = Station(5, 'Kasse')
     baecker.start()
     metzger.start()
     kaese.start()
@@ -183,18 +199,18 @@ if __name__ == "__main__":
     metzger.kill = True
     kaese.kill = True
     kasse.kill = True
-    #my_print('Simulationsende: %is' % evQ.time)
-    # my_print('Anzahl Kunden: %i' % (Customer.count
-    #                                 ))
-    # my_print('Anzahl vollständige Einkäufe %i' % Customer.complete)
-    # x = Customer.duration / Customer.count
-    # my_print(str('Mittlere Einkaufsdauer %.2fs' % x))
+    diff = simulation_end - simulation_start
+    print('Simulationsende: ' + str(diff))
+    print('Anzahl Kunden: %i' % Customer.count)
+    print('Anzahl vollständige Einkäufe %i' % Customer.complete)
+    x = Customer.duration / Customer.count
+    print(str('Mittlere Einkaufsdauer %.2fs' % x))
     # x = Customer.duration_cond_complete / Customer.complete
     # my_print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
-    # S = ('Bäcker', 'Metzger', 'Käse', 'Kasse')
-    # for s in S:
-    #     x = Customer.dropped[s] / (Customer.served[s] + Customer.dropped[s]) * 100
-    #     my_print('Drop percentage at %s: %.2f' % (s, x))
+    S = ('Bäcker', 'Metzger', 'Käse', 'Kasse')
+    for s in S:
+         x = Customer.dropped[s] / (Customer.served[s] + Customer.dropped[s]) * 100
+         print('Drop percentage at %s: %.2f' % (s, x))
     #
     # f.close()
     # fc.close()
