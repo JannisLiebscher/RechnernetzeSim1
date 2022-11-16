@@ -127,10 +127,12 @@ class Customer(Thread):
             Customer.served[self.nextStation().stationsname] += 1
             print(self.id + ": Fertig an Station " + self.nextStation().stationsname)
             self.removeCurrentListItem()
+            self.finish_time = datetime.datetime.now()
+            dur = self.finish_time - self.start_time
         if self.allDone:
             Customer.complete += 1
-        self.finish_time = datetime.datetime.now()
-        Customer.duration += self.finish_time - self.start_time
+            Customer.duration_cond_complete += dur.seconds
+        Customer.duration += dur.seconds
 
     def nextStationWalkTime(self):
         return self.shoppinglist[0][0]
@@ -205,8 +207,8 @@ if __name__ == "__main__":
     print('Anzahl vollständige Einkäufe %i' % Customer.complete)
     x = Customer.duration / Customer.count
     print(str('Mittlere Einkaufsdauer %.2fs' % x))
-    # x = Customer.duration_cond_complete / Customer.complete
-    # my_print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
+    x = Customer.duration_cond_complete / Customer.complete
+    print('Mittlere Einkaufsdauer (vollständig): %.2fs' % x)
     S = ('Bäcker', 'Metzger', 'Käse', 'Kasse')
     for s in S:
          x = Customer.dropped[s] / (Customer.served[s] + Customer.dropped[s]) * 100
