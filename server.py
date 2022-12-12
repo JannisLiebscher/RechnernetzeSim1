@@ -67,7 +67,7 @@ sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
 # Binde den Socket an eine Adresse und einen Port
 print("Verbinde den Socket mit dem Server")
-server_address = ('localhost', 10000)
+server_address = ('localhost', 5)
 sock.bind(server_address)
 
 # Lausche auf eingehende Verbindungen (maximal 1)
