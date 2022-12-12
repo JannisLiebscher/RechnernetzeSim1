@@ -37,4 +37,5 @@ else:
 
 # keine Rückmeldung für TCP ports keine
 # UDP alle Verbindungen erfolgreich
-
+# Aufgabe 5 noch machen
+# Wireshark aufzeichnen(5.21)
