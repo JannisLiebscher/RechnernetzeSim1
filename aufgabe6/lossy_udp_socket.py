@@ -22,7 +22,7 @@ class lossy_udp_socket():
         
     # interface for sending packets
     def send(self,packet):
-        print('Sending packet with length: '+str(len(packet)))                       
+        print('Sending packet with length: '+str(len(packet))+ str(packet))
         self.sock.sendto(packet,self.addr)
 
     # interface for ending socket

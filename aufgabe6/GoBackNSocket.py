@@ -2,6 +2,11 @@ from lossy_udp_socket import lossy_udp_socket
 import threading
 import time
 
+
+WINDOWSIZE = 1000
+NUMEROFPACKEGES = 256
+counter = 0
+TIMEOUT = 2
 class GoBackN():
     def send(self,package):
         package.timer()
@@ -32,41 +37,51 @@ class  package():
         if not self.arrived == True:
             self.timeout = True
 
+
 def sendOb(obj):
-    #nur die nächsten 3
-    if(len(obj)>0):
-        for ob in obj:
-            GoBackNobj.send(ob)
-            time.sleep(1)
+
+    if(counter <= len(obj)):
+        s= 0
+        while s< WINDOWSIZE and s+counter< len(obj):
+            print('s: '+str(s))
+            print('counter: ' + str(counter))
+            obj[counter+s].arrived = False
+            obj[counter + s].timeout = False
+            GoBackNobj.send(obj[counter+s])
+            #time.sleep(3)
+            s = s+1
         reciveOb(obj)
     else:
         return
 def reciveOb(obj):
-    for ob in obj:
-        timeout = False
+    global counter
+    for ob in obj[counter:]:
         while ob.arrived == False:
             if ob.timeout == True:
-                timeout = True
                 break
-        if timeout == False:
-            revievcedOb.append(obj)
-            print('package arrived successfully'+ str(ob.msg))
+        if ob.timeout == False:
+            counter= counter +1
+            print('package arrived successfully' + str(ob.msg) + '\n')
+            if len(obj)>= counter+WINDOWSIZE:
+                GoBackNobj.send(obj[counter+WINDOWSIZE-1])
+
         else:
             print('package timeout'+ str(ob.msg))
             sendOb(obj)
             return
 
 
+
 GoBackNobj = GoBackN()
-lossy = lossy_udp_socket(GoBackNobj,50,('127.0.0.1',50),0.5)
+lossy = lossy_udp_socket(GoBackNobj,50,('127.0.0.1',50),0.1)
 revievcedOb = list()
 
 #create n packages
 obj = list()
-for i in range(3):
+for i in range(NUMEROFPACKEGES):
     strMa = "HI," +str(i)
     msg = str.encode(strMa)
-    obj.append(package(msg, 5))
+    obj.append(package(msg, TIMEOUT))
 
 #start first window
 sendOb(obj)
