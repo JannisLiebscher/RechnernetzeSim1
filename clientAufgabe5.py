@@ -3,9 +3,9 @@ import struct
 import threading
 import time
 
-echo = True
+echo = False
 ip = '141.37.168.26'
-protocol = 'UDP'
+protocol = 'TCP'
 
 # Verbinde den Socket mit dem Server
 def connect(port):
@@ -30,6 +30,7 @@ if not echo:
     for i in range(1,51):
         thread = threading.Thread(target=connect, args=(i,))
         thread.start()
+        time.sleep(3)
 else:
     thread = threading.Thread(target=connect, args=(7,))
     thread.start()

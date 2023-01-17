@@ -1,12 +1,12 @@
 from lossy_udp_socket import lossy_udp_socket
 import threading
 import time
+import base64
 
-
-WINDOWSIZE = 1000
+WINDOWSIZE = 5
 NUMEROFPACKEGES = 256
 counter = 0
-TIMEOUT = 2
+TIMEOUT = 0.1
 class GoBackN():
     def send(self,package):
         package.timer()
@@ -43,8 +43,8 @@ def sendOb(obj):
     if(counter <= len(obj)):
         s= 0
         while s< WINDOWSIZE and s+counter< len(obj):
-            print('s: '+str(s))
-            print('counter: ' + str(counter))
+            #print('s: '+str(s))
+            #print('counter: ' + str(counter))
             obj[counter+s].arrived = False
             obj[counter + s].timeout = False
             GoBackNobj.send(obj[counter+s])
@@ -78,15 +78,40 @@ revievcedOb = list()
 
 #create n packages
 obj = list()
+f = open('newfile',"wb")
+f.seek(1000-1)
+f.write(b"\0")
+f.close
+
+with open('newfile', 'r') as file:
+    data = file.read().replace('\n', '')
+
 for i in range(NUMEROFPACKEGES):
-    strMa = "HI," +str(i)
-    msg = str.encode(strMa)
-    obj.append(package(msg, TIMEOUT))
+    #strMa = "HI," +str(i)
+    #
+    #msg = base64.b64encode(f)
+    msg = data + ',' +str(i)
+    mssg = str.encode(msg)
+    obj.append(package(mssg, TIMEOUT))
 
 #start first window
+summe = 0
+start = time.time()
 sendOb(obj)
-
+ende = time.time()
+print('{:5.3f}'.format(ende-start))
 
 lossy.stop()
+# windowsize 10 = 28.156
+# WINDOWSIZE 5 = 22.282
+# WINDOWSIZE 3 = 24.282
+
+
+
+
+
+
+
+
 
 

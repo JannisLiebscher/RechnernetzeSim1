@@ -1,7 +1,25 @@
 import socket
 import struct
+import threading
 import time
 import codecs
+
+global Clients
+Clients = []
+
+IP_Server = 'localhost'
+POTR_Server = 10000
+
+Client_Port_UDP = 1200
+
+CHAT_IP = 'localhost'
+CHAT_Port = 1220
+
+myNickname = "client1"
+
+global goOn
+goOn = True
+
 
 def splitString(result):
     ClientStrings = result.split('|')
@@ -19,42 +37,76 @@ def splitString(result):
             newList.append(string)
             counter = counter + 1
     return Clients
+def update():
+    global goOn
+    while goOn:
+        rec = server.recv(1024)
+        ans = rec.decode('utf-8')
+        print(ans)
+        global Clients
+        Clients = splitString(ans)
+def chatWithUser(chat):#chatf
+    chat.send(b'Hi')
+    ans = chat.recv(1024)
+    print(ans)
+
+def listenchat(): #listenUDP
+    global goOn
+    while goOn:
+        ans = clientudp.recv(1024)
+        rec = ans.decode('utf-8') # Nickname|ip|Port
+        con = rec.split('|')
+        chat_UDP.connect((con[1],int(con[2])))
+        print("connected to User: " + str(con[0]))
+        threading.Thread(target=chatWithUser,args=(chat_UDP,)).start()
+
+def tryConnectWithUser(): #send connect with user
+    nickname = input('enter Nickname')
+    found = False
+    for c in Clients:
+        if(c[0] == nickname):
+            user = c
+            found = True
+    if found == False:
+        print("Nickname nicht gefunden")
+        tryConnectWithUser()
+    else:
+        msg = myNickname + '|' + CHAT_IP + '|' + CHAT_Port
+        msg = msg.encode('utf-8')
+        clientudp.sendto(msg,(user[1],user[2]))
+        chat_UDP.listen(5)
+        conn, addr = chat_UDP.accept()
+        threading.Thread(target=chatWithUser,args=(conn,)).start()
 
 
+# Verbindung zum Server
+server = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+server.connect((IP_Server,POTR_Server))
 
-# Erstelle einen TCP/IP-Socket
-sock= socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+# Udp port Bind
+clientudp = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+clientudp.bind(('',Client_Port_UDP))
 
-client_address = ('localhost', 1200)
-sock.bind(client_address)
+chat_UDP = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+chat_UDP.bind((CHAT_IP,CHAT_Port))
 
-# Verbinde den Socket mit dem Server
-print("Verbinde den Socket mit dem Server")
-server_address = ('localhost', 10000)
-sock.connect(server_address)
 
 # Erstelle die Anfrage-Nachricht
-operation = "Login|Client1|localhost|1200" # Nickname, IP Adresse und UDP Port
-
+operation = "Login|Client1|127.0.0.1|" + str(Client_Port_UDP) # Nickname, IP Adresse und UDP Port
 # Packe die Anfrage-Nachricht als Bytes-Objekt
 request = str.encode(operation)
+
 #Anmelden beim Server
-sock.sendall(request)
+loggedin = False
+while loggedin == False:
+    server.send(request)
+    ans = server.recv(1024)
+    ansString = ans.decode('utf-8')
+    if(ansString == 'Success'):
+        loggedin = True
+        print('logged in')
 
-#Warte auf die Bestätigung
-response = sock.recv(1024)
-print("client wurde beim Server angemeldet ")
+updates = threading.Thread(target=update).start()
+chat = threading.Thread(target=listenchat).start()
+tryConnectWithUser()
 
-result = response.decode('utf-8')
-print("Result:", result)
-Clients = splitString(result)
-
-sock.listen(2)
-run = True
-while run==True:
-    client_socket = sock.accept()
-    response = client_socket.recv(1024)
-    result = response.decode('utf-8')
-    Clients = splitString(result)
-
-sock.close
